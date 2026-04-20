@@ -24,12 +24,15 @@ definePageMeta({ layout: false })
 const form = reactive({ username: '', password: '' })
 const error = ref('')
 
-function handleLogin() {
-  if (form.username === 'admin' && form.password === '123456') {
-    const token = useCookie('token')
-    token.value = 'logged-in'
+async function handleLogin() {
+  try {
+    const { token } = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: form
+    })
+    useCookie('token').value = token
     navigateTo('/protected')
-  } else {
+  } catch {
     error.value = '用户名或密码错误'
   }
 }
