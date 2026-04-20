@@ -1,0 +1,6 @@
+/* assets/css/main.css — 需要在 nuxt.config.ts 中引入 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
