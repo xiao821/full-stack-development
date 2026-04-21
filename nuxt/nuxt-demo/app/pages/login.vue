@@ -4,8 +4,8 @@
       <vue-particles id="particles" :options="particlesOptions" />
     </ClientOnly>
     <div class="login-box">
-      <h2>登录</h2>
-      <form @submit.prevent="handleLogin">
+      <h2>{{ isRegister ? '注册' : '登录' }}</h2>
+      <form @submit.prevent="isRegister ? handleRegister() : handleLogin()">
         <div class="field">
           <label>用户名</label>
           <input v-model="form.username" type="text" placeholder="请输入用户名" />
@@ -15,17 +15,22 @@
           <input v-model="form.password" type="password" placeholder="请输入密码" />
         </div>
         <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit">登录</button>
+        <button type="submit">{{ isRegister ? '注册' : '登录' }}</button>
       </form>
+      <p class="switch">
+        {{ isRegister ? '已有账号？' : '没有账号？' }}
+        <span @click="isRegister = !isRegister; error = ''">{{ isRegister ? '去登录' : '去注册' }}</span>
+      </p>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({ layout: false })
 
 const form = reactive({ username: '', password: '' })
 const error = ref('')
+const isRegister = ref(false)
 
 const particlesOptions = {
   background: { color: '#0d1117' },
@@ -41,14 +46,22 @@ const particlesOptions = {
 
 async function handleLogin() {
   try {
-    const { token } = await $fetch('/api/auth/login', {
-      method: 'POST',
-      body: form
-    })
+    const { token } = await $fetch('/api/auth/login', { method: 'POST', body: form })
     useCookie('token').value = token
     navigateTo('/')
   } catch {
     error.value = '用户名或密码错误'
+  }
+}
+
+async function handleRegister() {
+  try {
+    await $fetch('/api/auth/register', { method: 'POST', body: form })
+    isRegister.value = false
+    error.value = ''
+    ElMessage.success('注册成功，请登录')
+  } catch (e: any) {
+    error.value = e?.data?.message || '注册失败'
   }
 }
 </script>
@@ -124,6 +137,17 @@ button:hover { opacity: 0.9; transform: translateY(-1px); }
   font-size: 13px;
   margin-bottom: 8px;
 }
+.switch {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #a0aec0;
+}
+.switch span {
+  color: #667eea;
+  cursor: pointer;
+}
+.switch span:hover { text-decoration: underline; }
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }

@@ -4,21 +4,22 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h2>我的笔记</h2>
-        <button class="btn-new">+ 新建</button>
+      <button class="btn-new" @click="buildnote">+ 新建</button>
       </div>
       <div class="search">
         <input placeholder="搜索笔记..." />
       </div>
       <ul class="note-list">
-        <li class="note-item active">
-          <div class="note-title">笔记标题 1</div>
-          <div class="note-preview">这是笔记的预览内容...</div>
-          <div class="note-date">2026-04-20</div>
-        </li>
-        <li class="note-item">
-          <div class="note-title">笔记标题 2</div>
-          <div class="note-preview">这是笔记的预览内容...</div>
-          <div class="note-date">2026-04-19</div>
+        <li
+          v-for="note in noteList"
+          :key="note.id"
+          class="note-item"
+          :class="{ active: current?.id === note.id }"
+          @click="selectNote(note)"
+        >
+          <div class="note-title">{{ note.title || '无标题' }}</div>
+          <div class="note-preview">{{ note.content }}</div>
+          <div class="note-date">{{ note.updated_at?.slice(0, 10) }}</div>
         </li>
       </ul>
       <div class="sidebar-footer">
@@ -29,13 +30,13 @@
     <!-- 右侧编辑区 -->
     <main class="editor">
       <div class="editor-header">
-        <input class="editor-title" placeholder="笔记标题" />
+        <input class="editor-title" placeholder="笔记标题" v-model="form.title" />
         <div class="editor-actions">
-          <button class="btn-save">保存</button>
-          <button class="btn-delete">删除</button>
+          <button class="btn-save" @click="savenote" v-show="form.title || form.content">保存</button>
+          <button class="btn-delete" @click="deletenote" v-show="current?.id">删除</button>
         </div>
       </div>
-      <textarea class="editor-body" placeholder="开始记录..."></textarea>
+      <textarea class="editor-body" placeholder="开始记录..." v-model="form.content"></textarea>
     </main>
   </div>
 </template>
@@ -43,11 +44,64 @@
 <script setup>
 definePageMeta({ layout: false })
 
+const noteList = ref([])
+const current = ref(null)
+const form = reactive({ title: '', content: '' })
+
+// 加载笔记列表
+const getnotes = async () => {
+  const { list } = await $fetch('/api/notes')
+  noteList.value = list
+}
+
+// 选中笔记
+const selectNote = (note) => {
+  current.value = note
+  form.title = note.title
+  form.content = note.content
+}
+
+// 新建笔记
+const buildnote = async () => {
+  const note = await $fetch('/api/notes', { method: 'POST', body: { title: '', content: '' } })
+  noteList.value.unshift(note)
+  selectNote(note)
+}
+
+// 保存笔记
+const savenote = async () => {
+  if (!current.value) return
+  const updated = await $fetch(`/api/notes/${current.value.id}`, { method: 'PUT', body: form })
+  const idx = noteList.value.findIndex(n => n.id === current.value.id)
+  if (idx !== -1) noteList.value[idx] = updated
+  current.value = updated
+}
+
+// 删除笔记
+const deletenote = async () => {
+  if (!current.value) return
+  try {
+    await ElMessageBox.confirm('确定要删除这篇笔记吗？', '提示', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await $fetch(`/api/notes/${current.value.id}`, { method: 'DELETE' })
+    noteList.value = noteList.value.filter(n => n.id !== current.value.id)
+    current.value = null
+    form.title = ''
+    form.content = ''
+    ElMessage.success('删除成功')
+  } catch {}
+}
+
 async function logout() {
   await $fetch('/api/auth/logout', { method: 'POST' })
   useCookie('token').value = null
   navigateTo('/login')
 }
+
+onMounted(getnotes)
 </script>
 
 <style scoped>
