@@ -23,9 +23,27 @@
         </li>
       </ul>
       <div class="sidebar-footer">
+        <button class="btn-footer" @click="showPwdDialog = true">修改密码</button>
+        <NuxtLink v-if="isAdmin" to="/admin/users" class="btn-footer admin">用户管理</NuxtLink>
         <button class="btn-logout" @click="logout">退出登录</button>
       </div>
     </aside>
+
+    <!-- 修改密码弹窗 -->
+    <el-dialog v-model="showPwdDialog" title="修改密码" width="360px">
+      <div class="field">
+        <label>原密码</label>
+        <el-input v-model="pwdForm.oldPassword" type="password" placeholder="请输入原密码" />
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>新密码</label>
+        <el-input v-model="pwdForm.newPassword" type="password" placeholder="请输入新密码" />
+      </div>
+      <template #footer>
+        <el-button @click="showPwdDialog = false">取消</el-button>
+        <el-button type="primary" @click="changePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 右侧编辑区 -->
     <main class="editor">
@@ -47,11 +65,20 @@ definePageMeta({ layout: false })
 const noteList = ref([])
 const current = ref(null)
 const form = reactive({ title: '', content: '' })
+const showPwdDialog = ref(false)
+const pwdForm = reactive({ oldPassword: '', newPassword: '' })
+const isAdmin = ref(false)
 
 // 加载笔记列表
 const getnotes = async () => {
   const { list } = await $fetch('/api/notes')
   noteList.value = list
+}
+
+// 获取当前用户信息
+const getMe = async () => {
+  const { user } = await $fetch('/api/auth/me')
+  isAdmin.value = user.username === 'admin'
 }
 
 // 选中笔记
@@ -95,13 +122,29 @@ const deletenote = async () => {
   } catch {}
 }
 
+// 修改密码
+const changePassword = async () => {
+  try {
+    await $fetch('/api/auth/password', { method: 'PUT', body: pwdForm })
+    ElMessage.success('密码修改成功')
+    showPwdDialog.value = false
+    pwdForm.oldPassword = ''
+    pwdForm.newPassword = ''
+  } catch (e) {
+    ElMessage.error(e?.data?.message || '修改失败')
+  }
+}
+
 async function logout() {
   await $fetch('/api/auth/logout', { method: 'POST' })
   useCookie('token').value = null
   navigateTo('/login')
 }
 
-onMounted(getnotes)
+onMounted(() => {
+  getnotes()
+  getMe()
+})
 </script>
 
 <style scoped>
@@ -214,6 +257,24 @@ onMounted(getnotes)
   transition: all 0.2s;
 }
 .btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+.btn-footer {
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: all 0.2s;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+.btn-footer:hover { border-color: #4f46e5; color: #4f46e5; }
+.btn-footer.admin { color: #4f46e5; border-color: #c7d2fe; }
+.field label { font-size: 13px; color: #555; margin-bottom: 6px; display: block; }
 
 /* 编辑区 */
 .editor {
