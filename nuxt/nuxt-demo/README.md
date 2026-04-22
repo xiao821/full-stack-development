@@ -2,6 +2,8 @@
 
 Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
+项目部署说明见：[DEPLOYMENT.md](./DEPLOYMENT.md)
+
 ## Setup
 
 Make sure to install dependencies:
